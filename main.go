@@ -187,76 +187,159 @@ func createApiGateway(ctx *pulumi.Context, lambdaFunc *lambda.Function, userpool
 		return err
 	}
 
-	apiGETMethod, err := apigateway.NewMethod(
-		ctx,
-		fmt.Sprintf("%s-method-GET", apiName),
-		&apigateway.MethodArgs{
-			HttpMethod:    pulumi.String("GET"),
-			ResourceId:    apiResMessageProxy.ID(),
-			RestApi:       api.ID(),
-			Authorization: pulumi.String("COGNITO_USER_POOLS"),
-			AuthorizerId:  apiAuthorizer.ID(),
-		},
-		pulumi.Parent(apiResMessageProxy),
-	)
+	// apiGETMethod, err := apigateway.NewMethod(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-method-GET", apiName),
+	// 	&apigateway.MethodArgs{
+	// 		HttpMethod:    pulumi.String("GET"),
+	// 		ResourceId:    apiResMessageProxy.ID(),
+	// 		RestApi:       api.ID(),
+	// 		Authorization: pulumi.String("COGNITO_USER_POOLS"),
+	// 		AuthorizerId:  apiAuthorizer.ID(),
+	// 	},
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
 
-	if err != nil {
-		return err
+	// if err != nil {
+	// 	return err
+	// }
+
+	// apiPOSTMethod, err := apigateway.NewMethod(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-method-POST", apiName),
+	// 	&apigateway.MethodArgs{
+	// 		HttpMethod:    pulumi.String("POST"),
+	// 		ResourceId:    apiResMessageProxy.ID(),
+	// 		RestApi:       api.ID(),
+	// 		Authorization: pulumi.String("COGNITO_USER_POOLS"),
+	// 		AuthorizerId:  apiAuthorizer.ID(),
+	// 	},
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
+
+	// apiPUTMethod, err := apigateway.NewMethod(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-method-POST", apiName),
+	// 	&apigateway.MethodArgs{
+	// 		HttpMethod:    pulumi.String("PUT"),
+	// 		ResourceId:    apiResMessageProxy.ID(),
+	// 		RestApi:       api.ID(),
+	// 		Authorization: pulumi.String("COGNITO_USER_POOLS"),
+	// 		AuthorizerId:  apiAuthorizer.ID(),
+	// 	},
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	// _, err = apigateway.NewIntegration(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-lambda-integration-POST-proxy", apiName),
+	// 	&apigateway.IntegrationArgs{
+	// 		RestApi:               api.ID(),
+	// 		ResourceId:            apiResMessageProxy.ID(),
+	// 		HttpMethod:            pulumi.String("POST"),
+	// 		IntegrationHttpMethod: pulumi.String("POST"),
+	// 		Type:                  pulumi.String("AWS_PROXY"),
+	// 		Uri:                   &lambdaFunc.InvokeArn,
+	// 	},
+	// 	pulumi.DependsOn([]pulumi.Resource{apiPOSTMethod}),
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	// _, err = apigateway.NewIntegration(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-lambda-integration-GET-proxy", apiName),
+	// 	&apigateway.IntegrationArgs{
+	// 		RestApi:               api.ID(),
+	// 		ResourceId:            apiResMessageProxy.ID(),
+	// 		HttpMethod:            pulumi.String("POST"),
+	// 		IntegrationHttpMethod: pulumi.String("POST"),
+	// 		Type:                  pulumi.String("AWS_PROXY"),
+	// 		Uri:                   &lambdaFunc.InvokeArn,
+	// 	},
+	// 	pulumi.DependsOn([]pulumi.Resource{apiGETMethod}),
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	// _, err = apigateway.NewIntegration(
+	// 	ctx,
+	// 	fmt.Sprintf("%s-lambda-integration-PUT-proxy", apiName),
+	// 	&apigateway.IntegrationArgs{
+	// 		RestApi:               api.ID(),
+	// 		ResourceId:            apiResMessageProxy.ID(),
+	// 		HttpMethod:            pulumi.String("PUT"),
+	// 		IntegrationHttpMethod: pulumi.String("PUT"),
+	// 		Type:                  pulumi.String("AWS_PROXY"),
+	// 		Uri:                   &lambdaFunc.InvokeArn,
+	// 	},
+	// 	pulumi.DependsOn([]pulumi.Resource{apiPUTMethod}),
+	// 	pulumi.Parent(apiResMessageProxy),
+	// )
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	createMethodAndIntegration := func(httpAction string) (*apigateway.Method, *apigateway.Integration, error) {
+		resMethod, err := apigateway.NewMethod(
+			ctx,
+			fmt.Sprintf("%s-method-%s", apiName, httpAction),
+			&apigateway.MethodArgs{
+				HttpMethod:    pulumi.String(httpAction),
+				ResourceId:    apiResMessageProxy.ID(),
+				RestApi:       api.ID(),
+				Authorization: pulumi.String("COGNITO_USER_POOLS"),
+				AuthorizerId:  apiAuthorizer.ID(),
+			},
+			pulumi.Parent(apiResMessageProxy),
+		)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		resMethodIntegration, err := apigateway.NewIntegration(
+			ctx,
+			fmt.Sprintf("%s-lambda-integration-%s-proxy", apiName, httpAction),
+			&apigateway.IntegrationArgs{
+				RestApi:               api.ID(),
+				ResourceId:            apiResMessageProxy.ID(),
+				HttpMethod:            pulumi.String(httpAction),
+				IntegrationHttpMethod: pulumi.String("POST"),
+				Type:                  pulumi.String("AWS_PROXY"),
+				Uri:                   &lambdaFunc.InvokeArn,
+			},
+			pulumi.DependsOn([]pulumi.Resource{resMethod}),
+			pulumi.Parent(apiResMessageProxy),
+		)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return resMethod, resMethodIntegration, nil
 	}
 
-	apiPOSTMethod, err := apigateway.NewMethod(
-		ctx,
-		fmt.Sprintf("%s-method-POST", apiName),
-		&apigateway.MethodArgs{
-			HttpMethod:    pulumi.String("POST"),
-			ResourceId:    apiResMessageProxy.ID(),
-			RestApi:       api.ID(),
-			Authorization: pulumi.String("COGNITO_USER_POOLS"),
-			AuthorizerId:  apiAuthorizer.ID(),
-		},
-		pulumi.Parent(apiResMessageProxy),
-	)
+	var httpMethodsRes []pulumi.Resource = make([]pulumi.Resource, 0)
+	httpActions := []string{"GET", "POST", "PUT"}
 
-	if err != nil {
-		return err
-	}
-
-	_, err = apigateway.NewIntegration(
-		ctx,
-		fmt.Sprintf("%s-lambda-integration-POST-proxy", apiName),
-		&apigateway.IntegrationArgs{
-			RestApi:               api.ID(),
-			ResourceId:            apiResMessageProxy.ID(),
-			HttpMethod:            pulumi.String("POST"),
-			IntegrationHttpMethod: pulumi.String("POST"),
-			Type:                  pulumi.String("AWS_PROXY"),
-			Uri:                   &lambdaFunc.InvokeArn,
-		},
-		pulumi.DependsOn([]pulumi.Resource{apiPOSTMethod}),
-		pulumi.Parent(apiResMessageProxy),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	_, err = apigateway.NewIntegration(
-		ctx,
-		fmt.Sprintf("%s-lambda-integration-GET-proxy", apiName),
-		&apigateway.IntegrationArgs{
-			RestApi:               api.ID(),
-			ResourceId:            apiResMessageProxy.ID(),
-			HttpMethod:            pulumi.String("GET"),
-			IntegrationHttpMethod: pulumi.String("POST"),
-			Type:                  pulumi.String("AWS_PROXY"),
-			Uri:                   &lambdaFunc.InvokeArn,
-		},
-		pulumi.DependsOn([]pulumi.Resource{apiGETMethod}),
-		pulumi.Parent(apiResMessageProxy),
-	)
-
-	if err != nil {
-		return err
+	for _, action := range httpActions {
+		httpRes, httpResIntegration, err := createMethodAndIntegration(action)
+		if err != nil {
+			return err
+		}
+		httpMethodsRes = append(httpMethodsRes, httpRes, httpResIntegration)
 	}
 
 	_, err = lambda.NewPermission(
@@ -283,7 +366,7 @@ func createApiGateway(ctx *pulumi.Context, lambdaFunc *lambda.Function, userpool
 			RestApi:   api.ID(),
 			StageName: pulumi.String("dev"),
 		},
-		pulumi.DependsOn([]pulumi.Resource{apiRes, apiGETMethod, apiPOSTMethod}),
+		pulumi.DependsOn(append(httpMethodsRes, apiRes)),
 		pulumi.Parent(api))
 
 	if err != nil {
@@ -391,7 +474,7 @@ func createLambda(ctx *pulumi.Context) (*lambda.Function, error) {
 		Role:    iamRole.Arn,
 		Handler: pulumi.String("main"),
 		Runtime: pulumi.String("go1.x"),
-		Code:    pulumi.NewFileArchive("./lambdaCode/main.zip"),
+		Code:    pulumi.NewFileArchive("./lambdabin/main.zip"),
 		Environment: &lambda.FunctionEnvironmentArgs{
 			Variables: pulumi.ToStringMap(map[string]string{
 				"TEST": "ciao",
